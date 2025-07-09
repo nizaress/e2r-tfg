@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inferencia a Modelos</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: rgb(63, 69, 87);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 800px;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            font-weight: 300;
+            background: rgba(60, 60, 80, 1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+            font-size: 1.1em;
+        }
+
+        select, textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            transform: translateY(-2px);
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+            font-family: 'Courier New', monospace;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary {
+            background: rgba(118, 75, 162, 1);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #666;
+            border: 2px solid #e0e0e0;
+        }
+
+        .btn-secondary:hover {
+            background: #e9ecef;
+            transform: translateY(-2px);
+        }
+
+        .response-section {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #f0f0f0;
+        }
+
+        .response-box {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            min-height: 100px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #667eea;
+            font-style: italic;
+        }
+
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: ''; }
+            40% { content: '.'; }
+            60% { content: '..'; }
+            80%, 100% { content: '...'; }
+        }
+
+        .error {
+            background: #fee;
+            border-color: #fcc;
+            color: #c33;
+        }
+
+        .success {
+            background: #efe;
+            border-color: #cfc;
+            color: #363;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .model-info {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .timestamp {
+            color: #666;
+            font-size: 12px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Lectura Facilitada</h1>
+        
+        <form id="inferenceForm">
+            <div class="form-group">
+                <label for="modelSelect">Seleccionar Modelo:</label>
+                <select id="modelSelect" name="model" required>
+                    <option value="">-- Selecciona un modelo --</option>
+                    <option value="model1">Inferencia LLaMA 3.1</option>
+                    <option value="model2">Finetune Local</option>
+                    <option value="model3">GAN Local</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="inputText">Texto de Entrada:</label>
+                <textarea 
+                    id="inputText" 
+                    name="input" 
+                    placeholder="Escribe el texto a simplificar..."
+                    required
+                ></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="hfToken">Token de Hugging Face:</label>
+                <input 
+                    type="password" 
+                    id="hfToken" 
+                    name="hf_token" 
+                    placeholder="Introduce tu token..." 
+                />
+            </div>
+
+            <div class="button-group">
+                <button type="submit" class="btn-primary" id="submitBtn">
+                    Ejecutar Inferencia
+                </button>
+                <button type="button" class="btn-secondary" id="clearBtn">
+                    Limpiar
+                </button>
+            </div>
+        </form>
+
+        <div class="response-section">
+            <h3>Respuesta del Modelo:</h3>
+            <div class="status-bar" id="statusBar" style="display: none;">
+                <span class="model-info" id="modelInfo"></span>
+                <span class="timestamp" id="timestamp"></span>
+            </div>
+            <div class="response-box" id="responseBox">
+                Los resultados facilitados aparecerán aquí...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000';
+        
+        const form = document.getElementById('inferenceForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const responseBox = document.getElementById('responseBox');
+        const statusBar = document.getElementById('statusBar');
+        const modelInfo = document.getElementById('modelInfo');
+        const timestamp = document.getElementById('timestamp');
+
+        const modelConfig = {
+            'model1': {
+                name: 'Inferencia LLaMA 3.1',
+                endpoint: '/llama',
+                description: 'Inferencia en Hugging Face'
+            },
+            'model2': {
+                name: 'Finetune Local',
+                endpoint: '/finetune',
+                description: 'Modelo de ajuste fino'
+            },
+            'model3': {
+                name: 'GAN Local',
+                endpoint: '/gan',
+                description: 'Modelo de redes adversarias'
+            }
+        };
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(form);
+            const selectedModel = formData.get('model');
+            const inputText = formData.get('input');
+            const hfToken = formData.get('hf_token');
+
+            if (!selectedModel || !inputText.trim()) {
+                showError('Por favor, selecciona un modelo y proporciona texto de entrada.');
+                return;
+            }
+
+            await performInference(selectedModel, inputText, hfToken);
+        });
+
+        clearBtn.addEventListener('click', () => {
+            form.reset();
+            responseBox.textContent = 'Los resultados de la inferencia aparecerán aquí...';
+            responseBox.className = 'response-box';
+            statusBar.style.display = 'none';
+        });
+
+        async function performInference(modelKey, inputText, hfToken) {
+            const model = modelConfig[modelKey];
+            
+            showLoading(model.name);
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}${model.endpoint}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        text: inputText,
+                        model: modelKey,
+                        hf_token: hfToken
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Error del servidor: ${response.status} ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                showSuccess(result, model.name);
+                
+            } catch (error) {
+                console.error('Error en la inferencia:', error);
+                showError(`Error de conexión: ${error.message}`);
+            }
+        }
+
+        function showLoading(modelName) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Procesando...';
+            
+            responseBox.className = 'response-box loading';
+            responseBox.textContent = `Ejecutando con ${modelName}`;
+            
+            statusBar.style.display = 'flex';
+            modelInfo.textContent = `Modelo: ${modelName}`;
+            timestamp.textContent = 'Procesando...';
+        }
+
+        function showSuccess(result, modelName) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Ejecutar';
+            
+            responseBox.className = 'response-box success';
+
+            if (typeof result === 'object' && result.response) {
+                responseBox.textContent = result.response;
+            } else {
+                responseBox.textContent = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
+            }
+
+            statusBar.style.display = 'flex';
+            modelInfo.textContent = `Modelo: ${modelName}`;
+            timestamp.textContent = `Completado: ${new Date().toLocaleTimeString()}`;
+        }
+
+        function showError(message) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Ejecutar';
+            
+            responseBox.className = 'response-box error';
+            responseBox.textContent = `❌ ${message}`;
+            
+            statusBar.style.display = 'flex';
+            modelInfo.textContent = 'Error';
+            timestamp.textContent = new Date().toLocaleTimeString();
+        }
+    </script>
+</body>
+</html>
